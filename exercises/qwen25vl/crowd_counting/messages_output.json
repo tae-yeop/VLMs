@@ -1,0 +1,145 @@
+[
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000000.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Chair, Bottle, Projector, Microphone, Cup, Person, Laptop, Desk and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [20, 260, 102, 305], \"label\": \"Person\"}, {\"bbox_2d\": [102, 235, 139, 270], \"label\": \"Person\"}, {\"bbox_2d\": [140, 235, 174, 271], \"label\": \"Person\"}, {\"bbox_2d\": [135, 272, 177, 309], \"label\": \"Person\"}, {\"bbox_2d\": [102, 285, 193, 448], \"label\": \"Person\"}, {\"bbox_2d\": [193, 270, 229, 312], \"label\": \"Person\"}, {\"bbox_2d\": [234, 263, 283, 313], \"label\": \"Person\"}, {\"bbox_2d\": [271, 231, 321, 274], \"label\": \"Person\"}, {\"bbox_2d\": [20, 260, 102, 305], \"label\": \"Person\"}, {\"bbox_2d\": [102, 235, 139, 270], \"label\": \"Person\"}, {\"bbox_2d\": [140, 235, 174, 271], \"label\": \"Person\"}, {\"bbox_2d\": [135, 272, 177, 309], \"label\": \"Person\"}, {\"bbox_2d\": [102, 285, 193, 448], \"label\": \"Person\"}, {\"bbox_2d\": [193, 270, 229, 312], \"label\": \"Person\"}, {\"bbox_2d\": [234, 263, 283, 313], \"label\": \"Person\"}, {\"bbox_2d\": [271, 231, 321, 274], \"label\": \"Person\"}, {\"bbox_2d\": [389, 294, 682, 511], \"label\": \"Person\"}, {\"bbox_2d\": [320, 270, 362, 313], \"label\": \"Person\"}, {\"bbox_2d\": [471, 259, 522, 311], \"label\": \"Person\"}, {\"bbox_2d\": [525, 266, 593, 316], \"label\": \"Person\"}, {\"bbox_2d\": [594, 242, 641, 330], \"label\": \"Person\"}, {\"bbox_2d\": [559, 241, 595, 279], \"label\": \"Person\"}, {\"bbox_2d\": [427, 236, 471, 277], \"label\": \"Person\"}, {\"bbox_2d\": [377, 234, 424, 276], \"label\": \"Person\"}, {\"bbox_2d\": [331, 231, 374, 275], \"label\": \"Person\"}, {\"bbox_2d\": [0, 319, 202, 511], \"label\": \"Chair\"}, {\"bbox_2d\": [0, 319, 202, 511], \"label\": \"Chair\"}, {\"bbox_2d\": [392, 321, 683, 511], \"label\": \"Chair\"}, {\"bbox_2d\": [5, 285, 13, 304], \"label\": \"Bottle\"}, {\"bbox_2d\": [115, 249, 123, 269], \"label\": \"Bottle\"}, {\"bbox_2d\": [137, 250, 145, 270], \"label\": \"Bottle\"}, {\"bbox_2d\": [238, 262, 245, 274], \"label\": \"Bottle\"}, {\"bbox_2d\": [305, 289, 315, 305], \"label\": \"Bottle\"}, {\"bbox_2d\": [327, 253, 339, 274], \"label\": \"Bottle\"}, {\"bbox_2d\": [524, 300, 534, 316], \"label\": \"Bottle\"}, {\"bbox_2d\": [508, 258, 527, 279], \"label\": \"Bottle\"}, {\"bbox_2d\": [382, 295, 391, 315], \"label\": \"Bottle\"}, {\"bbox_2d\": [0, 262, 605, 400], \"label\": \"Desk\"}, {\"bbox_2d\": [96, 261, 102, 269], \"label\": \"Cup\"}, {\"bbox_2d\": [282, 253, 293, 264], \"label\": \"Microphone\"}, {\"bbox_2d\": [549, 305, 556, 320], \"label\": \"Microphone\"}, {\"bbox_2d\": [384, 293, 391, 305], \"label\": \"Microphone\"}, {\"bbox_2d\": [111, 287, 123, 296], \"label\": \"Microphone\"}, {\"bbox_2d\": [227, 252, 256, 274], \"label\": \"Laptop\"}, {\"bbox_2d\": [438, 257, 467, 279], \"label\": \"Laptop\"}, {\"bbox_2d\": [276, 0, 335, 33], \"label\": \"Projector\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000005.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each SUV, Car, Ship, Street Lights, Person and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [137, 195, 148, 209], \"label\": \"Person\"}, {\"bbox_2d\": [225, 225, 446, 335], \"label\": \"Car\"}, {\"bbox_2d\": [0, 219, 124, 248], \"label\": \"Car\"}, {\"bbox_2d\": [243, 178, 254, 225], \"label\": \"Street Lights\"}, {\"bbox_2d\": [174, 137, 186, 229], \"label\": \"Street Lights\"}, {\"bbox_2d\": [389, 215, 518, 282], \"label\": \"SUV\"}, {\"bbox_2d\": [230, 208, 339, 265], \"label\": \"SUV\"}, {\"bbox_2d\": [559, 96, 600, 109], \"label\": \"Ship\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000006.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Bus, Truck, Motorcycle, Car, Street Lights, Person, Van and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [595, 246, 608, 264], \"label\": \"Person\"}, {\"bbox_2d\": [589, 213, 596, 235], \"label\": \"Person\"}, {\"bbox_2d\": [459, 213, 467, 225], \"label\": \"Person\"}, {\"bbox_2d\": [611, 434, 719, 511], \"label\": \"Car\"}, {\"bbox_2d\": [652, 331, 732, 406], \"label\": \"Car\"}, {\"bbox_2d\": [745, 241, 782, 266], \"label\": \"Car\"}, {\"bbox_2d\": [439, 271, 486, 316], \"label\": \"Car\"}, {\"bbox_2d\": [497, 213, 519, 231], \"label\": \"Car\"}, {\"bbox_2d\": [0, 428, 52, 500], \"label\": \"Car\"}, {\"bbox_2d\": [208, 241, 244, 265], \"label\": \"Car\"}, {\"bbox_2d\": [408, 152, 476, 224], \"label\": \"Car\"}, {\"bbox_2d\": [236, 149, 313, 225], \"label\": \"Car\"}, {\"bbox_2d\": [318, 188, 374, 226], \"label\": \"Car\"}, {\"bbox_2d\": [505, 190, 581, 219], \"label\": \"Car\"}, {\"bbox_2d\": [308, 1, 450, 306], \"label\": \"Street Lights\"}, {\"bbox_2d\": [818, 121, 842, 231], \"label\": \"Street Lights\"}, {\"bbox_2d\": [492, 120, 522, 191], \"label\": \"Street Lights\"}, {\"bbox_2d\": [347, 64, 432, 236], \"label\": \"Street Lights\"}, {\"bbox_2d\": [153, 294, 203, 339], \"label\": \"Van\"}, {\"bbox_2d\": [329, 227, 356, 249], \"label\": \"Van\"}, {\"bbox_2d\": [339, 145, 369, 159], \"label\": \"Bus\"}, {\"bbox_2d\": [594, 257, 611, 280], \"label\": \"Motorcycle\"}, {\"bbox_2d\": [459, 219, 467, 232], \"label\": \"Motorcycle\"}, {\"bbox_2d\": [535, 211, 568, 250], \"label\": \"Truck\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000009.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Glasses, Bracelet, Gloves, Person, Bed and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [179, 295, 615, 512], \"label\": \"Person\"}, {\"bbox_2d\": [375, 28, 748, 411], \"label\": \"Person\"}, {\"bbox_2d\": [524, 169, 667, 279], \"label\": \"Person\"}, {\"bbox_2d\": [8, 38, 220, 376], \"label\": \"Person\"}, {\"bbox_2d\": [54, 77, 135, 102], \"label\": \"Glasses\"}, {\"bbox_2d\": [149, 304, 167, 321], \"label\": \"Bracelet\"}, {\"bbox_2d\": [223, 399, 253, 437], \"label\": \"Bracelet\"}, {\"bbox_2d\": [378, 273, 485, 327], \"label\": \"Gloves\"}, {\"bbox_2d\": [460, 275, 561, 338], \"label\": \"Gloves\"}, {\"bbox_2d\": [0, 289, 748, 511], \"label\": \"Bed\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000010.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Bottle, Leather Shoes, Watch, Hat, Necklace, Street Lights, Cup, Belt, Person, Traffic Light, Sneakers, Sandals, Traffic Sign, Handbag/Satchel and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [284, 108, 373, 201], \"label\": \"Person\"}, {\"bbox_2d\": [8, 144, 441, 464], \"label\": \"Person\"}, {\"bbox_2d\": [433, 163, 645, 398], \"label\": \"Person\"}, {\"bbox_2d\": [633, 171, 766, 389], \"label\": \"Person\"}, {\"bbox_2d\": [50, 433, 81, 453], \"label\": \"Sneakers\"}, {\"bbox_2d\": [89, 437, 109, 456], \"label\": \"Sneakers\"}, {\"bbox_2d\": [137, 437, 163, 458], \"label\": \"Sneakers\"}, {\"bbox_2d\": [161, 442, 187, 462], \"label\": \"Sneakers\"}, {\"bbox_2d\": [445, 352, 454, 366], \"label\": \"Sneakers\"}, {\"bbox_2d\": [454, 365, 467, 377], \"label\": \"Sneakers\"}, {\"bbox_2d\": [515, 384, 533, 398], \"label\": \"Sneakers\"}, {\"bbox_2d\": [542, 383, 556, 397], \"label\": \"Sneakers\"}, {\"bbox_2d\": [682, 384, 693, 389], \"label\": \"Sneakers\"}, {\"bbox_2d\": [698, 378, 709, 386], \"label\": \"Sneakers\"}, {\"bbox_2d\": [536, 164, 561, 184], \"label\": \"Hat\"}, {\"bbox_2d\": [41, 310, 59, 337], \"label\": \"Bottle\"}, {\"bbox_2d\": [721, 282, 730, 308], \"label\": \"Bottle\"}, {\"bbox_2d\": [155, 296, 175, 321], \"label\": \"Cup\"}, {\"bbox_2d\": [712, 74, 730, 210], \"label\": \"Street Lights\"}, {\"bbox_2d\": [254, 232, 283, 263], \"label\": \"Handbag/Satchel\"}, {\"bbox_2d\": [489, 290, 514, 346], \"label\": \"Handbag/Satchel\"}, {\"bbox_2d\": [274, 448, 297, 464], \"label\": \"Leather Shoes\"}, {\"bbox_2d\": [307, 456, 325, 464], \"label\": \"Leather Shoes\"}, {\"bbox_2d\": [327, 441, 372, 462], \"label\": \"Leather Shoes\"}, {\"bbox_2d\": [380, 442, 408, 460], \"label\": \"Leather Shoes\"}, {\"bbox_2d\": [189, 388, 206, 400], \"label\": \"Leather Shoes\"}, {\"bbox_2d\": [208, 383, 220, 399], \"label\": \"Leather Shoes\"}, {\"bbox_2d\": [239, 389, 259, 402], \"label\": \"Leather Shoes\"}, {\"bbox_2d\": [291, 204, 314, 222], \"label\": \"Necklace\"}, {\"bbox_2d\": [63, 273, 106, 283], \"label\": \"Belt\"}, {\"bbox_2d\": [370, 97, 396, 142], \"label\": \"Traffic Light\"}, {\"bbox_2d\": [743, 164, 755, 188], \"label\": \"Traffic Light\"}, {\"bbox_2d\": [119, 300, 130, 309], \"label\": \"Watch\"}, {\"bbox_2d\": [572, 371, 593, 387], \"label\": \"Sandals\"}, {\"bbox_2d\": [611, 370, 631, 389], \"label\": \"Sandals\"}, {\"bbox_2d\": [456, 81, 470, 96], \"label\": \"Traffic Sign\"}, {\"bbox_2d\": [479, 83, 526, 99], \"label\": \"Traffic Sign\"}, {\"bbox_2d\": [479, 102, 526, 118], \"label\": \"Traffic Sign\"}, {\"bbox_2d\": [738, 135, 752, 141], \"label\": \"Traffic Sign\"}, {\"bbox_2d\": [738, 141, 752, 147], \"label\": \"Traffic Sign\"}, {\"bbox_2d\": [754, 135, 767, 141], \"label\": \"Traffic Sign\"}, {\"bbox_2d\": [754, 141, 766, 147], \"label\": \"Traffic Sign\"}, {\"bbox_2d\": [103, 156, 151, 184], \"label\": \"Traffic Sign\"}, {\"bbox_2d\": [420, 99, 469, 121], \"label\": \"Traffic Sign\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000013.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Radiator, Chair, Bottle, Glasses, Backpack, Cabinet/shelf, Bracelet, Hat, Hanger, Storage box, Pie, Cup, Person, Plate, Bowl/Basin and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [437, 171, 720, 511], \"label\": \"Person\"}, {\"bbox_2d\": [191, 224, 514, 511], \"label\": \"Person\"}, {\"bbox_2d\": [0, 68, 167, 511], \"label\": \"Person\"}, {\"bbox_2d\": [113, 156, 241, 319], \"label\": \"Person\"}, {\"bbox_2d\": [0, 118, 37, 255], \"label\": \"Person\"}, {\"bbox_2d\": [366, 153, 463, 343], \"label\": \"Person\"}, {\"bbox_2d\": [416, 148, 480, 283], \"label\": \"Person\"}, {\"bbox_2d\": [327, 201, 378, 242], \"label\": \"Person\"}, {\"bbox_2d\": [82, 278, 150, 386], \"label\": \"Person\"}, {\"bbox_2d\": [226, 223, 331, 278], \"label\": \"Person\"}, {\"bbox_2d\": [14, 192, 771, 511], \"label\": \"Chair\"}, {\"bbox_2d\": [370, 152, 431, 199], \"label\": \"Hat\"}, {\"bbox_2d\": [465, 190, 502, 208], \"label\": \"Hat\"}, {\"bbox_2d\": [88, 125, 134, 160], \"label\": \"Glasses\"}, {\"bbox_2d\": [215, 265, 233, 325], \"label\": \"Bottle\"}, {\"bbox_2d\": [262, 225, 282, 272], \"label\": \"Bottle\"}, {\"bbox_2d\": [300, 224, 319, 285], \"label\": \"Bottle\"}, {\"bbox_2d\": [494, 184, 530, 204], \"label\": \"Cup\"}, {\"bbox_2d\": [158, 112, 309, 231], \"label\": \"Cabinet/shelf\"}, {\"bbox_2d\": [111, 254, 119, 269], \"label\": \"Bracelet\"}, {\"bbox_2d\": [456, 365, 560, 394], \"label\": \"Plate\"}, {\"bbox_2d\": [255, 290, 316, 304], \"label\": \"Plate\"}, {\"bbox_2d\": [455, 161, 513, 195], \"label\": \"Storage box\"}, {\"bbox_2d\": [184, 100, 227, 121], \"label\": \"Bowl/Basin\"}, {\"bbox_2d\": [467, 190, 494, 205], \"label\": \"Bowl/Basin\"}, {\"bbox_2d\": [658, 188, 713, 269], \"label\": \"Backpack\"}, {\"bbox_2d\": [427, 63, 438, 100], \"label\": \"Hanger\"}, {\"bbox_2d\": [383, 64, 386, 84], \"label\": \"Hanger\"}, {\"bbox_2d\": [461, 361, 512, 389], \"label\": \"Pie\"}, {\"bbox_2d\": [188, 345, 247, 385], \"label\": \"Pie\"}, {\"bbox_2d\": [644, 172, 771, 246], \"label\": \"Radiator\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000014.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Carpet, Picture/Frame, Cabinet/shelf, Vase, Person, Flower and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [23, 133, 42, 188], \"label\": \"Person\"}, {\"bbox_2d\": [7, 143, 26, 182], \"label\": \"Person\"}, {\"bbox_2d\": [483, 153, 534, 378], \"label\": \"Cabinet/shelf\"}, {\"bbox_2d\": [692, 312, 767, 417], \"label\": \"Cabinet/shelf\"}, {\"bbox_2d\": [594, 152, 717, 245], \"label\": \"Picture/Frame\"}, {\"bbox_2d\": [561, 291, 617, 357], \"label\": \"Picture/Frame\"}, {\"bbox_2d\": [558, 355, 647, 423], \"label\": \"Picture/Frame\"}, {\"bbox_2d\": [73, 272, 175, 344], \"label\": \"Flower\"}, {\"bbox_2d\": [97, 345, 167, 488], \"label\": \"Vase\"}, {\"bbox_2d\": [537, 448, 767, 512], \"label\": \"Carpet\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000017.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Camera, Person, Hat and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [389, 256, 413, 278], \"label\": \"Person\"}, {\"bbox_2d\": [0, 255, 150, 328], \"label\": \"Person\"}, {\"bbox_2d\": [1, 338, 204, 435], \"label\": \"Person\"}, {\"bbox_2d\": [0, 432, 201, 512], \"label\": \"Person\"}, {\"bbox_2d\": [178, 291, 585, 438], \"label\": \"Person\"}, {\"bbox_2d\": [199, 337, 683, 512], \"label\": \"Person\"}, {\"bbox_2d\": [436, 491, 467, 511], \"label\": \"Hat\"}, {\"bbox_2d\": [477, 453, 502, 470], \"label\": \"Hat\"}, {\"bbox_2d\": [430, 461, 442, 469], \"label\": \"Hat\"}, {\"bbox_2d\": [471, 446, 484, 453], \"label\": \"Hat\"}, {\"bbox_2d\": [576, 394, 611, 413], \"label\": \"Hat\"}, {\"bbox_2d\": [637, 371, 654, 380], \"label\": \"Hat\"}, {\"bbox_2d\": [553, 422, 573, 435], \"label\": \"Camera\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000020.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Helmet, Person, Motorcycle, Hat and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [583, 267, 616, 299], \"label\": \"Person\"}, {\"bbox_2d\": [0, 215, 135, 307], \"label\": \"Person\"}, {\"bbox_2d\": [143, 233, 259, 304], \"label\": \"Person\"}, {\"bbox_2d\": [257, 240, 311, 315], \"label\": \"Person\"}, {\"bbox_2d\": [332, 249, 374, 279], \"label\": \"Person\"}, {\"bbox_2d\": [393, 252, 455, 279], \"label\": \"Person\"}, {\"bbox_2d\": [457, 252, 533, 315], \"label\": \"Person\"}, {\"bbox_2d\": [233, 237, 243, 241], \"label\": \"Hat\"}, {\"bbox_2d\": [0, 216, 10, 224], \"label\": \"Hat\"}, {\"bbox_2d\": [445, 315, 526, 399], \"label\": \"Helmet\"}, {\"bbox_2d\": [33, 234, 767, 512], \"label\": \"Motorcycle\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000022.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Faucet, Mirror, Leather Shoes, Bracelet, Tie, Trash bin Can, High Heels, Bench, Sink, Person, Handbag/Satchel, Towel and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [616, 154, 715, 430], \"label\": \"Person\"}, {\"bbox_2d\": [480, 239, 566, 413], \"label\": \"Person\"}, {\"bbox_2d\": [449, 340, 501, 367], \"label\": \"Handbag/Satchel\"}, {\"bbox_2d\": [641, 217, 648, 230], \"label\": \"Bracelet\"}, {\"bbox_2d\": [642, 418, 673, 430], \"label\": \"Leather Shoes\"}, {\"bbox_2d\": [0, 374, 251, 463], \"label\": \"Bench\"}, {\"bbox_2d\": [2, 403, 349, 511], \"label\": \"Bench\"}, {\"bbox_2d\": [337, 294, 567, 357], \"label\": \"Bench\"}, {\"bbox_2d\": [427, 300, 646, 379], \"label\": \"Bench\"}, {\"bbox_2d\": [454, 462, 567, 510], \"label\": \"Bench\"}, {\"bbox_2d\": [618, 321, 807, 421], \"label\": \"Bench\"}, {\"bbox_2d\": [763, 337, 914, 458], \"label\": \"Bench\"}, {\"bbox_2d\": [901, 308, 914, 326], \"label\": \"Bench\"}, {\"bbox_2d\": [533, 238, 662, 269], \"label\": \"Bench\"}, {\"bbox_2d\": [591, 258, 672, 289], \"label\": \"Bench\"}, {\"bbox_2d\": [654, 262, 767, 296], \"label\": \"Bench\"}, {\"bbox_2d\": [716, 232, 790, 253], \"label\": \"Bench\"}, {\"bbox_2d\": [770, 235, 844, 258], \"label\": \"Bench\"}, {\"bbox_2d\": [667, 196, 673, 236], \"label\": \"Tie\"}, {\"bbox_2d\": [147, 282, 207, 394], \"label\": \"Trash bin Can\"}, {\"bbox_2d\": [492, 384, 518, 413], \"label\": \"High Heels\"}, {\"bbox_2d\": [510, 384, 531, 408], \"label\": \"High Heels\"}, {\"bbox_2d\": [534, 196, 561, 249], \"label\": \"Towel\"}, {\"bbox_2d\": [488, 171, 505, 250], \"label\": \"Towel\"}, {\"bbox_2d\": [375, 231, 384, 242], \"label\": \"Faucet\"}, {\"bbox_2d\": [336, 229, 345, 238], \"label\": \"Faucet\"}, {\"bbox_2d\": [292, 222, 304, 229], \"label\": \"Faucet\"}, {\"bbox_2d\": [295, 142, 320, 206], \"label\": \"Mirror\"}, {\"bbox_2d\": [329, 142, 356, 208], \"label\": \"Mirror\"}, {\"bbox_2d\": [362, 142, 395, 210], \"label\": \"Mirror\"}, {\"bbox_2d\": [338, 228, 397, 254], \"label\": \"Sink\"}, {\"bbox_2d\": [300, 229, 356, 250], \"label\": \"Sink\"}, {\"bbox_2d\": [267, 223, 322, 239], \"label\": \"Sink\"}]"
+      }
+    ]
+  },
+  {
+    "image": "/purestorage/AILAB/AI_1/dataset/Objects365/images/train/objects365_v1_00000024.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "Outline the position of each Handbag/Satchel, Stroller, Person, Sneakers and output all the coordinates in JSON format."
+      },
+      {
+        "from": "gpt",
+        "value": "[{\"bbox_2d\": [737, 383, 764, 412], \"label\": \"Person\"}, {\"bbox_2d\": [652, 320, 707, 454], \"label\": \"Person\"}, {\"bbox_2d\": [312, 329, 346, 401], \"label\": \"Person\"}, {\"bbox_2d\": [157, 342, 170, 389], \"label\": \"Person\"}, {\"bbox_2d\": [166, 337, 179, 394], \"label\": \"Person\"}, {\"bbox_2d\": [0, 327, 99, 511], \"label\": \"Person\"}, {\"bbox_2d\": [664, 442, 679, 454], \"label\": \"Sneakers\"}, {\"bbox_2d\": [0, 407, 36, 437], \"label\": \"Handbag/Satchel\"}, {\"bbox_2d\": [679, 425, 703, 457], \"label\": \"Handbag/Satchel\"}, {\"bbox_2d\": [693, 370, 764, 468], \"label\": \"Stroller\"}]"
+      }
+    ]
+  }
+]
