@@ -9,6 +9,7 @@ from PIL import Image
 
 from smart_surveillance.configs import PipelineConfig
 from smart_surveillance.pipeline.trespass import run_trespass
+from smart_surveillance.anomaly import run_anomaly
 from smart_surveillance.utils.roi import polygon_from_mask
 
 from smart_surveillance.detection.yoloworld import YOLOWorldDetector
@@ -18,6 +19,7 @@ from smart_surveillance.heavy.qwen_vl import QwenVideoQA
 
 # 샘플 비디오 경로: 우선순위 = 환경변수 -> ./assets/demo.mp4
 DEFAULT_SAMPLE = "/purestorage/AILAB/AI_1/tyk/3_CUProjects/VLMs/smart-surveillance/samples/demo.mp4"
+DEFAULT_QUERIES = ", ".join(PipelineConfig().anomaly.open_vocab_queries)
 
 
 # import debugpy
@@ -153,7 +155,7 @@ def clear_roi(video_state):
         return _editor_value(frame0), "ROI cleared. Draw a new mask.", []
     return _editor_value(None), "ROI cleared. Load a video first.", []
 
-def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, enable_grd, enable_sam2, enable_qwen):
+def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, enable_grd, enable_sam2, enable_qwen, mode, queries_text):
     """
     ③ 실행: 선택된 비디오 + (옵션) ROI로 파이프라인 수행
     반환: [overlay_video, markdown_summary, raw_json]
@@ -165,6 +167,12 @@ def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, ena
     cfg.detection.backend = backend
     cfg.ensure_dirs()
 
+    # Parse user queries (comma/line separated)
+    user_queries = []
+    if isinstance(queries_text, str) and len(queries_text.strip()) > 0:
+        raw = queries_text.replace("\n", ",")
+        user_queries = [s.strip() for s in raw.split(",") if s.strip()]
+
     # ROI: state 우선, 없으면 editor의 mask 사용
     poly = roi_poly_state or []
     if (not poly) and image_editor_data and image_editor_data.get("mask") is not None:
@@ -175,13 +183,22 @@ def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, ena
         cfg.roi.rois[cfg.roi.default_cam_id] = [tuple(p) for p in poly]
 
     # 실행
-    res = run_trespass(
-        video_state,
-        cfg,
-        enable_grd=bool(enable_grd),
-        enable_sam2=bool(enable_sam2),
-        enable_qwen=bool(enable_qwen),
-    )
+    if mode == "anomaly":
+        res = run_anomaly(
+            video_state,
+            cfg,
+            enable_qwen=bool(enable_qwen),
+            queries=user_queries or None,
+        )
+    else:
+        res = run_trespass(
+            video_state,
+            cfg,
+            enable_grd=bool(enable_grd),
+            enable_sam2=bool(enable_sam2),
+            enable_qwen=bool(enable_qwen),
+            queries=user_queries or None,
+        )
     
     overlay = res.get("overlay_uri") or res.get("clip_uri")
     verdict = res.get("verdict")
@@ -217,8 +234,8 @@ def warmup_models():
         print("[WARMUP] Qwen-VL warmup failed:", e)
     return None
 
-with gr.Blocks(title="Smart Surveillance - Trespass (Gradio)") as demo:
-    gr.Markdown("# 스마트 관제 데모 (월담/ROI)  \n- 업로드한 **MP4**의 첫 프레임 위에 **마스크를 그려 ROI**를 지정하세요.  \n- ROI가 없으면 일반 모드(사람 보이면 이벤트)로 동작합니다.")
+with gr.Blocks(title="Smart Surveillance (Trespass & Anomaly)") as demo:
+    gr.Markdown("# 스마트 관제 데모 (월담/일반 이상탐지)  \n- 업로드한 **MP4**의 첫 프레임 위에 **마스크를 그려 ROI**를 지정하세요.  \n- 'Anomaly' 모드에서는 ROI 없이 일반적인 이상 탐지를 수행합니다.")
     # 상태
     roi_state = gr.State([])       # [(x,y), ...]
     video_state = gr.State(None)   # 현재 선택된 비디오 경로
@@ -249,13 +266,15 @@ with gr.Blocks(title="Smart Surveillance - Trespass (Gradio)") as demo:
 
     # ③ 실행
     gr.Markdown("## ③ 실행")
+    mode = gr.Radio(choices=["trespass", "anomaly"], value="trespass", label="모드")
     backend = gr.Radio(choices=["owlvit", "yoloworld"], value="owlvit", label="게이트 백엔드")
+    queries_text = gr.Textbox(label="오픈보캡 프롬프트(쉼표/줄바꿈 구분)", value=DEFAULT_QUERIES, placeholder="person, fire, smoke, gun, knife, fight")
     # Heavy components toggles
     with gr.Row():
         enable_grd = gr.Checkbox(value=True, label="GroundingDINO")
         enable_sam2 = gr.Checkbox(value=True, label="SAM2")
         enable_qwen = gr.Checkbox(value=True, label="Qwen-VL Judge")
-    run_btn = gr.Button("게이트→(선택)GRD→(선택)SAM2→(선택)Qwen 실행")
+    run_btn = gr.Button("실행")
 
     # 출력
     gr.Markdown("## 출력")
@@ -286,7 +305,7 @@ with gr.Blocks(title="Smart Surveillance - Trespass (Gradio)") as demo:
     # 실행
     run_btn.click(
         fn=run_pipeline_gr,
-        inputs=[video_state, backend, editor, roi_state, enable_grd, enable_sam2, enable_qwen],
+        inputs=[video_state, backend, editor, roi_state, enable_grd, enable_sam2, enable_qwen, mode, queries_text],
         outputs=[out_video, out_md, out_json]
     )
 

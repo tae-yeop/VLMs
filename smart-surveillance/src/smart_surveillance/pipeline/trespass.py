@@ -82,6 +82,7 @@ def run_trespass(
     enable_grd: bool = True,
     enable_sam2: bool = True,
     enable_qwen: bool = True,
+    queries: List[str] | None = None,
 ) -> Dict[str, Any]:
     """
     Returns an EventVerdict-like dict:
@@ -111,9 +112,15 @@ def run_trespass(
     trigger = None  # (frame_idx, pts_ms, bbox)
     first_frame_img = None
 
+    # Prepare queries: trespass requires 'person'
+    q = (queries or cfg.detection.open_vocab_queries or ["person"]).copy()
+    q_lower = [s.lower().strip() for s in q]
+    if "person" not in q_lower:
+        q.append("person")
+
     for meta, frame in loader.iterate_frames(): # frame = np.array(1080, 1920, 3)
         pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        dets = det.detect(pil, cfg.detection.open_vocab_queries or ["person"])
+        dets = det.detect(pil, q)
         # person만 골라 ROI 내부인지 확인
         for d in dets:
             if d["cls"].lower() != "person": continue

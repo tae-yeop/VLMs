@@ -50,11 +50,46 @@ class HeavyConfig:
     qwen_fps: float = 1.0  # 저비용 요약을 위해 낮은 FPS
 
 @dataclass
+class AnomalyConfig:
+    # Open-vocab queries for generic anomaly gate (in addition to person)
+    open_vocab_queries: List[str] = field(
+        default_factory=lambda: [
+            "person",
+            "fire",
+            "smoke",
+            "gun",
+            "knife",
+            "fight",
+            "blood",
+            "explosion",
+            "helmet",
+            "no helmet",
+            "running person",
+            "car",
+            "motorcycle",
+            "bicycle",
+        ]
+    )
+    # Behavioral rule thresholds
+    loiter_seconds: float = 15.0
+    running_min_px_per_sec: float = 250.0
+    crowd_person_threshold: int = 8
+    # Confidence threshold to treat open-vocab detection as anomaly
+    detection_conf_threshold: float = 0.35
+    # Qwen prompt for generic anomaly summarization
+    general_anomaly_prompt: str = (
+        "Identify whether this clip contains suspicious, unsafe, or abnormal events "
+        "such as fire/smoke, violence, weapons, crowding, running, or loitering. "
+        "Start with one of [ANOMALY, NO_ANOMALY, UNCERTAIN] and then one brief reason."
+    )
+
+@dataclass
 class PipelineConfig:
     ingestion: IngestionConfig = field(default_factory=IngestionConfig)
     roi: ROIConfig = field(default_factory=ROIConfig)
     detection: DetectionConfig = field(default_factory=DetectionConfig)
     heavy: HeavyConfig = field(default_factory=HeavyConfig)
+    anomaly: AnomalyConfig = field(default_factory=AnomalyConfig)
     work_dir: str = "./runs"
 
     def ensure_dirs(self):
