@@ -21,6 +21,22 @@ from smart_surveillance.heavy.qwen_vl import QwenVideoQA
 DEFAULT_SAMPLE = "/purestorage/AILAB/AI_1/tyk/3_CUProjects/VLMs/smart-surveillance/samples/demo.mp4"
 DEFAULT_QUERIES = ", ".join(PipelineConfig().anomaly.open_vocab_queries)
 
+SAMPLES_DIR = os.path.join(os.path.dirname(__file__), "samples")
+
+def list_sample_files():
+    if not os.path.isdir(SAMPLES_DIR):
+        return []
+    allow = {".mp4", ".avi", ".mov", ".mkv"}
+    files = []
+    for name in sorted(os.listdir(SAMPLES_DIR)):
+        p = os.path.join(SAMPLES_DIR, name)
+        if os.path.isfile(p) and os.path.splitext(p)[1].lower() in allow:
+            files.append(p)
+    return files
+
+def list_sample_choices():
+    return [(os.path.basename(p), p) for p in list_sample_files()]
+
 
 # import debugpy
 
@@ -87,6 +103,26 @@ def handle_select_video(video_file, video_state):
     frame0 = extract_first_frame(path)
     status = f"Video selected: `{path}`\n- Draw a mask to set ROI."
     return _editor_value(frame0), status, [], path
+
+def handle_select_video_full(video_file, video_state):
+    """
+    ① 프레임 불러오기 / 소스 확정 (Video 컴포넌트 값도 함께 업데이트)
+    반환: [video_in_value, editor, status, roi_state, video_state]
+    """
+    path = None
+    if isinstance(video_file, str) and os.path.exists(video_file):
+        path = video_file
+    elif video_state and os.path.exists(video_state):
+        path = video_state
+    elif sample_exists():
+        path = DEFAULT_SAMPLE
+
+    if not path:
+        raise gr.Error("No video found. Upload a video or set DEMO_VIDEO / assets/demo.mp4.")
+
+    frame0 = extract_first_frame(path)
+    status = f"Video selected: `{path}`\n- Draw a mask to set ROI."
+    return path, _editor_value(frame0), status, [], path
 
 def _mask_from_image_like(im):
     if im is None:
@@ -155,7 +191,7 @@ def clear_roi(video_state):
         return _editor_value(frame0), "ROI cleared. Draw a new mask.", []
     return _editor_value(None), "ROI cleared. Load a video first.", []
 
-def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, enable_grd, enable_sam2, enable_qwen, mode, queries_text):
+def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, enable_grd, enable_sam2, enable_qwen, mode, queries_text, judge_prompt_preset, judge_prompt_override):
     """
     ③ 실행: 선택된 비디오 + (옵션) ROI로 파이프라인 수행
     반환: [overlay_video, markdown_summary, raw_json]
@@ -189,6 +225,7 @@ def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, ena
             cfg,
             enable_qwen=bool(enable_qwen),
             queries=user_queries or None,
+            judge_prompt_override=(judge_prompt_override or judge_prompt_preset or None),
         )
     else:
         res = run_trespass(
@@ -198,6 +235,7 @@ def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, ena
             enable_sam2=bool(enable_sam2),
             enable_qwen=bool(enable_qwen),
             queries=user_queries or None,
+            judge_prompt_override=(judge_prompt_override or judge_prompt_preset or None),
         )
     
     overlay = res.get("overlay_uri") or res.get("clip_uri")
@@ -207,7 +245,48 @@ def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, ena
     mode = res.get("mode", "general" if not poly else "roi")
 
     md = f"### Verdict: **{verdict}** (conf {conf:.2f})\n- Mode: `{mode}`\n- Explanation: {explanation}"
-    return overlay, md, json.dumps(res, indent=2, ensure_ascii=False)
+    return overlay, md, json.dumps(res, indent=2, ensure_ascii=False), (res.get("overlay_uri") or res.get("clip_uri") or None)
+
+
+def _prompt_presets():
+    return {
+        "Trespass (YES/NO/UNCERTAIN)": PipelineConfig().heavy.trespass_prompt,
+        "General anomaly summary": PipelineConfig().heavy.general_prompt,
+        "Safety hazard checklist": (
+            "Identify safety hazards (fire/smoke, slippery floor, crowding, PPE missing). "
+            "Start with [HAZARD, NO_HAZARD, UNCERTAIN] and list 1-3 hazards."
+        ),
+        "Action timeline": (
+            "Provide a brief timeline of notable actions in the clip in 3 bullet points."
+        ),
+        "Object inventory": (
+            "List notable objects detected in the clip (top-10)."
+        ),
+    }
+
+def chat_send(chat_state, chat_input, clip_uri, chat_system):
+    if not clip_uri or not os.path.exists(clip_uri):
+        return chat_state, "No clip to chat about. Run the pipeline first."
+    if not isinstance(chat_input, str) or not chat_input.strip():
+        return chat_state, None
+    try:
+        qwen = QwenVideoQA(PipelineConfig().heavy.qwen_model_id)
+        system_inst = chat_system.strip() if isinstance(chat_system, str) else "You are a helpful surveillance analyst. Answer strictly based on the provided clip."
+        # Use structured chat to avoid literal 'User:'/'Assistant:' tokens in output
+        answer = qwen.chat(
+            clip_uri,
+            chat_input.strip(),
+            fps=PipelineConfig().heavy.qwen_fps,
+            history=(chat_state or []),
+            system=system_inst,
+            max_new_tokens=128,
+        )
+        new_state = (chat_state or []) + [(chat_input.strip(), answer)]
+        return new_state, ""
+    except Exception as e:
+        err = f"Chat failed: {e}"
+        new_state = (chat_state or []) + [(chat_input.strip(), err)]
+        return new_state, ""
 
 
 def warmup_models():
@@ -235,7 +314,7 @@ def warmup_models():
     return None
 
 with gr.Blocks(title="Smart Surveillance (Trespass & Anomaly)") as demo:
-    gr.Markdown("# 스마트 관제 데모 (월담/일반 이상탐지)  \n- 업로드한 **MP4**의 첫 프레임 위에 **마스크를 그려 ROI**를 지정하세요.  \n- 'Anomaly' 모드에서는 ROI 없이 일반적인 이상 탐지를 수행합니다.")
+    gr.Markdown("# 스마트 관제 데모 (월담/일반 이상탐지)  \n- 업로드한 **MP4**의 첫 프레임 위에 **마스크를 그려 ROI**를 지정하세요.  \n- 'Anomaly' 모드에서는 ROI 없이 일반적인 이상 탐지를 수행합니다.  \n- 오픈보캡 프롬프트는 영어를 권장합니다(e.g., suitcase, luggage, smoke, fire, crowd).")
     # 상태
     roi_state = gr.State([])       # [(x,y), ...]
     video_state = gr.State(None)   # 현재 선택된 비디오 경로
@@ -248,7 +327,9 @@ with gr.Blocks(title="Smart Surveillance (Trespass & Anomaly)") as demo:
         interactive=True,
         value=DEFAULT_SAMPLE if sample_exists() else None,
     )
-    load_btn = gr.Button("프레임 불러오기 / 소스 확정")
+    with gr.Row():
+        load_btn = gr.Button("프레임 불러오기 / 소스 확정")
+        samples_dd = gr.Dropdown(choices=list_sample_choices(), label="샘플 선택", value=(DEFAULT_SAMPLE if sample_exists() else None))
 
     # 상태/안내
     status = gr.Markdown("Loading...")
@@ -274,6 +355,9 @@ with gr.Blocks(title="Smart Surveillance (Trespass & Anomaly)") as demo:
         enable_grd = gr.Checkbox(value=True, label="GroundingDINO")
         enable_sam2 = gr.Checkbox(value=True, label="SAM2")
         enable_qwen = gr.Checkbox(value=True, label="Qwen-VL Judge")
+    with gr.Row():
+        judge_prompt_preset = gr.Dropdown(choices=list(_prompt_presets().keys()), value="Trespass (YES/NO/UNCERTAIN)", label="Qwen Judge 프리셋")
+        judge_prompt_override = gr.Textbox(label="Qwen Judge 프롬프트 직접 입력(프리셋보다 우선)")
     run_btn = gr.Button("실행")
 
     # 출력
@@ -281,6 +365,7 @@ with gr.Blocks(title="Smart Surveillance (Trespass & Anomaly)") as demo:
     out_video = gr.Video(label="결과 오버레이 (있으면)")
     out_md = gr.Markdown(label="요약")
     out_json = gr.Textbox(label="Raw JSON", lines=18)
+    out_clip_state = gr.State(None)
 
     # ✅ 초기 로드: editor를 한 번만 outputs로 지정 (5개 반환!)
     demo.load(
@@ -302,11 +387,30 @@ with gr.Blocks(title="Smart Surveillance (Trespass & Anomaly)") as demo:
     use_mask_btn.click(fn=use_drawn_roi, inputs=[editor], outputs=[status, roi_state])
     clear_btn.click(fn=clear_roi, inputs=[video_state], outputs=[editor, status, roi_state])
 
+    # 샘플 선택 → 즉시 미리보기/상태 업데이트
+    samples_dd.change(
+        fn=handle_select_video_full,
+        inputs=[samples_dd, video_state],
+        outputs=[video_in, editor, status, roi_state, video_state]
+    )
+
     # 실행
     run_btn.click(
         fn=run_pipeline_gr,
-        inputs=[video_state, backend, editor, roi_state, enable_grd, enable_sam2, enable_qwen, mode, queries_text],
-        outputs=[out_video, out_md, out_json]
+        inputs=[video_state, backend, editor, roi_state, enable_grd, enable_sam2, enable_qwen, mode, queries_text, judge_prompt_preset, judge_prompt_override],
+        outputs=[out_video, out_md, out_json, out_clip_state]
+    )
+
+    # ④ 클립 대화 (Qwen‑VL)
+    gr.Markdown("## ④ 클립 대화 (Qwen‑VL)")
+    chat_system = gr.Textbox(label="시스템 지시문", value="You are a helpful surveillance analyst. Answer strictly based on the provided clip.")
+    chatbox = gr.Chatbot(label="Chat")
+    chat_input = gr.Textbox(label="질문")
+    chat_send_btn = gr.Button("전송")
+    chat_send_btn.click(
+        fn=chat_send,
+        inputs=[chatbox, chat_input, out_clip_state, chat_system],
+        outputs=[chatbox, status]
     )
 
 if __name__ == "__main__":

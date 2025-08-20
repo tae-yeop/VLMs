@@ -75,4 +75,132 @@ class QwenVideoQA:
 
         out_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         out_text = self.proc.batch_decode(out_ids, skip_special_tokens=True)[0]
-        return out_text.strip()
+        return _strip_role_preamble(out_text)
+
+    @torch.no_grad()
+    def chat(
+        self,
+        video_path: str,
+        question: str,
+        *,
+        fps: float = 1.0,
+        history: list[tuple[str, str]] | None = None,
+        system: str | None = None,
+        max_new_tokens: int = 128,
+    ) -> str:
+        """
+        Structured multi-turn chat over a video.
+        - system: optional system prompt
+        - history: list of (user, assistant) text turns
+        The final user turn includes the video and the question text.
+        """
+
+        def _extract_frames(video_file: str, target_fps: float, max_frames: int = 32) -> list[str]:
+            import tempfile
+            cap = cv2.VideoCapture(video_file)
+            if not cap.isOpened():
+                return []
+            src_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            step = max(1, int(round(src_fps / max(0.1, target_fps))))
+            tmpdir = tempfile.mkdtemp(prefix="qwen_frames_")
+            saved: list[str] = []
+            idx = 0
+            frame_idx = 0
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                if frame_idx % step == 0:
+                    outp = os.path.join(tmpdir, f"f_{idx:05d}.jpg")
+                    cv2.imwrite(outp, frame)
+                    saved.append(f"file://{outp}")
+                    idx += 1
+                    if len(saved) >= max_frames:
+                        break
+                frame_idx += 1
+            cap.release()
+            if len(saved) % 2 == 1 and len(saved) > 1:
+                saved = saved[:-1]
+            return saved
+
+        # Try direct video first
+        def _build_messages_with_video(uri: str) -> list[dict]:
+            msgs: list[dict] = []
+            if isinstance(system, str) and system.strip():
+                msgs.append({"role": "system", "content": [{"type": "text", "text": system.strip()}]})
+            # history as plain text turns
+            if history:
+                for u, a in history:
+                    if isinstance(u, str) and u.strip():
+                        msgs.append({"role": "user", "content": [{"type": "text", "text": u.strip()}]})
+                    if isinstance(a, str) and a.strip():
+                        msgs.append({"role": "assistant", "content": [{"type": "text", "text": a.strip()}]})
+            # final user turn with video + question
+            msgs.append({
+                "role": "user",
+                "content": [
+                    {"type": "video", "video": uri, "fps": float(fps)},
+                    {"type": "text", "text": question.strip()},
+                ]
+            })
+            return msgs
+
+        try:
+            messages = _build_messages_with_video(f"file://{video_path}")
+            text_input = self.proc.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            images, videos, vk = process_vision_info(messages, return_video_kwargs=True)
+            inputs = self.proc(text=[text_input], images=images, videos=videos, return_tensors="pt",
+                               padding=True, **vk).to(self.model.device if hasattr(self.model, "device") else "cuda")
+        except Exception:
+            frames = _extract_frames(video_path, target_fps=fps, max_frames=32)
+            if not frames:
+                raise
+            messages = []
+            if isinstance(system, str) and system.strip():
+                messages.append({"role": "system", "content": [{"type": "text", "text": system.strip()}]})
+            if history:
+                for u, a in history:
+                    if isinstance(u, str) and u.strip():
+                        messages.append({"role": "user", "content": [{"type": "text", "text": u.strip()}]})
+                    if isinstance(a, str) and a.strip():
+                        messages.append({"role": "assistant", "content": [{"type": "text", "text": a.strip()}]})
+            messages.append({"role": "user", "content": [{"type": "video", "video": frames}, {"type": "text", "text": question.strip()}]})
+            text_input = self.proc.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            images, videos, vk = process_vision_info(messages, return_video_kwargs=True)
+            inputs = self.proc(text=[text_input], images=images, videos=videos, return_tensors="pt",
+                               padding=True, **vk).to(self.model.device if hasattr(self.model, "device") else "cuda")
+
+        out_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        out_text = self.proc.batch_decode(out_ids, skip_special_tokens=True)[0]
+        return _strip_role_preamble(out_text)
+
+
+def _strip_role_preamble(text: str) -> str:
+    """Remove any 'system\n', 'user\n', 'assistant\n' transcript preamble that the
+    chat template may include in the decoded text. Keep only the assistant's final answer.
+    """
+    try:
+        s = text.strip()
+        low = s.lower()
+        # Prefer the last assistant marker
+        markers = ["\nassistant\n", "assistant:\n", "\nassistant:", "assistant\n"]
+        cut = -1
+        for m in markers:
+            i = low.rfind(m)
+            if i != -1:
+                cut = max(cut, i + len(m))
+        if cut != -1 and cut < len(s):
+            return s[cut:].strip()
+        # Fallback: drop leading role lines if present
+        lines = s.splitlines()
+        filtered = []
+        skip_roles = {"system", "user", "assistant"}
+        i = 0
+        while i < len(lines) and lines[i].strip().lower() in skip_roles:
+            i += 1
+            # also skip the following line if it's the system content line
+            # (best-effort; safe even if not present)
+        filtered = lines[i:]
+        return "\n".join(filtered).strip()
+    except Exception:
+        return text.strip()

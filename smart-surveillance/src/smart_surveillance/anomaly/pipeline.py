@@ -50,6 +50,7 @@ def run_anomaly(
     cfg: PipelineConfig,
     enable_qwen: bool = True,
     queries: List[str] | None = None,
+    judge_prompt_override: str | None = None,
 ) -> Dict[str, Any]:
     """
     Generic anomaly detection:
@@ -182,7 +183,8 @@ def run_anomaly(
                 if "bbox" in e:
                     x1,y1,x2,y2 = [int(v) for v in e["bbox"]]
                     cv2.rectangle(frame, (x1,y1), (x2,y2), (0, 0, 255), 2)
-                    cv2.putText(frame, e["type"], (x1, max(0, y1-6)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+                    label = e.get("type", "object")
+                    cv2.putText(frame, label, (x1, max(0, y1-6)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
             vw.write(frame)
         vw.release(); cap.release()
     except Exception as e:
@@ -192,12 +194,15 @@ def run_anomaly(
     verdict = "ANOMALY"
     conf = 0.8
     explanation = ", ".join(sorted({e["type"] for e in events}))
+    prompt_used = None
 
     if enable_qwen:
         try:
             qwen = QwenVideoQA(cfg.heavy.qwen_model_id)
+            prompt = (judge_prompt_override.strip() if isinstance(judge_prompt_override, str) and judge_prompt_override.strip() else cfg.anomaly.general_anomaly_prompt)
+            prompt_used = prompt
             answer = qwen.ask(overlay_path if os.path.exists(overlay_path) else clip_uri,
-                              cfg.anomaly.general_anomaly_prompt,
+                              prompt,
                               fps=cfg.heavy.qwen_fps,
                               max_new_tokens=64)
             explanation = answer
@@ -216,6 +221,7 @@ def run_anomaly(
         "overlay_uri": overlay_path if 'overlay_path' in locals() else clip_uri,
         "explanation": explanation,
         "events": events,
+        "prompt_used": prompt_used,
         "mode": "anomaly",
     }
 

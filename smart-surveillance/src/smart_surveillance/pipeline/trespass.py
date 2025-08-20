@@ -83,6 +83,7 @@ def run_trespass(
     enable_sam2: bool = True,
     enable_qwen: bool = True,
     queries: List[str] | None = None,
+    judge_prompt_override: str | None = None,
 ) -> Dict[str, Any]:
     """
     Returns an EventVerdict-like dict:
@@ -115,30 +116,34 @@ def run_trespass(
     # Prepare queries: trespass requires 'person'
     q = (queries or cfg.detection.open_vocab_queries or ["person"]).copy()
     q_lower = [s.lower().strip() for s in q]
-    if "person" not in q_lower:
-        q.append("person")
 
+    trigger_label = None
     for meta, frame in loader.iterate_frames(): # frame = np.array(1080, 1920, 3)
         pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         dets = det.detect(pil, q)
-        # person만 골라 ROI 내부인지 확인
+        # 선택된 클래스만 골라 ROI 내부인지 확인 (ROI 없으면 아무 위치)
         for d in dets:
-            if d["cls"].lower() != "person": continue
+            if d["cls"].lower() not in q_lower: continue
             x1,y1,x2,y2 = [int(v) for v in d["bbox"]]
             cx, cy = int((x1+x2)/2), int((y1+y2)/2)
             if roi_poly is None:  # 일반 모드
                 trigger = (meta["index"], meta["pts_ms"], [x1, y1, x2, y2])
+                trigger_label = d.get("cls", "object")
                 first_frame_img = pil
                 break
             else:
                 if _point_in_polygon((cx, cy), roi_poly):
                     trigger = (meta["index"], meta["pts_ms"], [x1, y1, x2, y2])
+                    trigger_label = d.get("cls", "object")
                     first_frame_img = pil
                     break
         if trigger: break
 
     if not trigger:
-        reason = "No person entering ROI" if roi_poly is not None else "No person detected"
+        reason = (
+            f"No target entering ROI (targets: {', '.join(q)})" if roi_poly is not None
+            else f"No target detected (targets: {', '.join(q)})"
+        )
         return {"verdict": "NO_TRESPASS", "confidence": 0.5, "explanation": reason, "clip_uri": None}
 
     # --- Build event clip around trigger ---
@@ -150,12 +155,21 @@ def run_trespass(
 
     # --- Grounding DINO refine (optional on the first frame of the clip) ---
     seed_box = trigger[2]
+    was_refined = False
+    grd_label = None
     if enable_grd:
         try:
             grd = GroundingDINOWrapper(cfg.heavy.grd_model_id, device="cuda")
-            refined = grd.refine(first_frame_img, ["person"], seed_boxes=[trigger[2]]) # bbox 나옴
-            if refined and len(refined) > 0 and "bbox" in refined[0]:
-                seed_box = refined[0]["bbox"]
+            # Prefer the triggered label if available; otherwise use user's query list
+            queries_for_grd = [trigger_label] if (locals().get("trigger_label") and trigger_label) else (q if 'q' in locals() else ["person"])  # type: ignore
+            refined = grd.refine(first_frame_img, queries_for_grd, seed_boxes=[trigger[2]])  # bbox 나옴
+            # pick highest score
+            if refined and len(refined) > 0:
+                best = max(refined, key=lambda d: float(d.get("score", 0.0)))
+                if "bbox" in best:
+                    seed_box = best["bbox"]
+                    grd_label = str(best.get("cls", trigger_label or "object"))
+                    was_refined = True
         except Exception as e:
             print("[WARN] GroundingDINO refine failed:", e)
 
@@ -201,12 +215,17 @@ def run_trespass(
             # Draw gate bbox (blue)
             gx1, gy1, gx2, gy2 = [int(v) for v in trigger[2]]
             cv2.rectangle(frame, (gx1, gy1), (gx2, gy2), (255, 0, 0), 2)
-            cv2.putText(frame, "gate", (gx1, max(0, gy1 - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+            gate_txt = f"gate:{trigger_label}" if trigger_label else "gate"
+            cv2.putText(frame, gate_txt, (gx1, max(0, gy1 - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
 
-            # Draw refined bbox (red)
+            # Draw refined/seed bbox (red)
             rx1, ry1, rx2, ry2 = [int(v) for v in seed_box]
             cv2.rectangle(frame, (rx1, ry1), (rx2, ry2), (0, 0, 255), 2)
-            cv2.putText(frame, "refined", (rx1, max(0, ry1 - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            if was_refined:
+                refined_txt = f"grd:{grd_label or trigger_label or 'object'}"
+            else:
+                refined_txt = f"seed:{trigger_label or 'object'}"
+            cv2.putText(frame, refined_txt, (rx1, max(0, ry1 - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
             # Optional: blend SAM2 mask (semi-transparent red)
             if tracked and (idx in tracked):
@@ -233,11 +252,13 @@ def run_trespass(
         overlay_path = clip_uri
 
     # --- Qwen judge (optional) ---
-    verdict = "UNCERTAIN"; conf = 0.6; answer = ""
+    verdict = "UNCERTAIN"; conf = 0.6; answer = ""; prompt_used = None
     if enable_qwen:
         try:
             qwen = QwenVideoQA(cfg.heavy.qwen_model_id)
-            prompt = cfg.heavy.trespass_prompt if roi_poly is not None else cfg.heavy.general_prompt
+            prompt = (judge_prompt_override.strip() if isinstance(judge_prompt_override, str) and judge_prompt_override.strip() else
+                      (cfg.heavy.trespass_prompt if roi_poly is not None else cfg.heavy.general_prompt))
+            prompt_used = prompt
             qwen_video_path = overlay_path if os.path.exists(overlay_path) else clip_uri
             answer = qwen.ask(qwen_video_path, prompt, fps=cfg.heavy.qwen_fps, max_new_tokens=64)
             ans_low = answer.lower()
@@ -255,6 +276,10 @@ def run_trespass(
         "clip_uri": clip_uri,
         "overlay_uri": overlay_path if 'overlay_path' in locals() else clip_uri,
         "seed_box": seed_box,
+        "trigger_label": trigger_label,
+        "grd_refined": was_refined,
+        "grd_label": grd_label,
+        "prompt_used": prompt_used,
         "explanation": answer,
         "mode": "roi" if roi_poly is not None else "general"
     }
