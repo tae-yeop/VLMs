@@ -1,0 +1,24 @@
+paths:
+  # 여러 소스 디렉토리를 리스트로 지정
+  source_image_dirs:
+    - "/purestorage/AILAB/AI_1/tyk/3_CUProjects/07.지능형_관제_서비스_CCTV_영상_데이터/outputs"
+  # 결과가 저장될 기본 디렉토리
+  target_base_dir: "/purestorage/AILAB/AI_1/tyk/3_CUProjects/07.지능형_관제_서비스_CCTV_영상_데이터/bbox_out"
+
+model:
+  # Hugging Face 모델 ID
+  model_id: "IDEA-Research/grounding-dino-base"
+
+detection:
+  classes: ["person", "luggage", "suitcase", "bag"]
+  colors: ["yellow", "green", "green", "green"]
+  box_threshold: 0.50
+
+  # -- 박스 병합 옵션 --
+  merge_options:
+    enabled: false
+    class_a: "person"
+    class_b: "stroller"
+    merged_label: "person_with_stroller"
+    # 두 박스 사이의 거리가 이 값(픽셀)보다 작으면 병합
+    proximity_threshold: 60
