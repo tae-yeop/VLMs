@@ -8,9 +8,8 @@ from PIL import Image
 
 from smart_surveillance.configs import PipelineConfig
 from smart_surveillance.ingestion.video_loader import VideoLoader
-from smart_surveillance.detection.yoloworld import YOLOWorldDetector
+from smart_surveillance.detection.yoloe import YOLOEOpenVocabDetector
 from smart_surveillance.heavy.grd import GroundingDINOWrapper
-from smart_surveillance.heavy.sam2_video import SAM2Video
 from smart_surveillance.heavy.qwen_vl import QwenVideoQA
 
 
@@ -80,7 +79,6 @@ def run_trespass(
     video_path: str,
     cfg: PipelineConfig,
     enable_grd: bool = True,
-    enable_sam2: bool = True,
     enable_qwen: bool = True,
     queries: List[str] | None = None,
     judge_prompt_override: str | None = None,
@@ -100,14 +98,14 @@ def run_trespass(
     roi_poly = _get_roi_or_none(cfg)
 
 
-    # --- Gate detector (YOLO-World or OWL-ViT fallback) ---
+    # --- Gate detector & segmenter (YOLOE) ---
     from PIL import Image
-    det = YOLOWorldDetector(backend=cfg.detection.backend,
-                            yoloworld_model_path=cfg.detection.yoloworld_model_path,
-                            owlvit_model_id=cfg.detection.owlvit_model_id,
-                            score_threshold=cfg.detection.score_threshold,
-                            max_dets=cfg.detection.max_dets,
-                            device="cuda")
+    det = YOLOEOpenVocabDetector(
+        yoloe_model_path=cfg.detection.yoloe_model_path or "yoloe-11l-seg.pt",
+        score_threshold=cfg.detection.score_threshold,
+        max_dets=cfg.detection.max_dets,
+        device="cuda",
+    )
     loader = VideoLoader(video_path, cfg.ingestion)
 
     trigger = None  # (frame_idx, pts_ms, bbox)
@@ -153,18 +151,16 @@ def run_trespass(
     out_clip = os.path.join(cfg.work_dir, "clips", f"evt_{trigger[0]}_{start_ms}_{end_ms}.mp4")
     clip_uri, start_frame_idx, fps = _build_clip(video_path, start_ms, end_ms, out_clip)
 
-    # --- Grounding DINO refine (optional on the first frame of the clip) ---
+    # --- Refine on first frame ---
     seed_box = trigger[2]
     was_refined = False
     grd_label = None
     if enable_grd:
         try:
             grd = GroundingDINOWrapper(cfg.heavy.grd_model_id, device="cuda")
-            # Prefer the triggered label if available; otherwise use user's query list
             queries_for_grd = [trigger_label] if (locals().get("trigger_label") and trigger_label) else (q if 'q' in locals() else ["person"])  # type: ignore
-            refined = grd.refine(first_frame_img, queries_for_grd, seed_boxes=[trigger[2]])  # bbox 나옴
-            # pick highest score
-            if refined and len(refined) > 0:
+            refined = grd.refine(first_frame_img, queries_for_grd, seed_boxes=[trigger[2]])
+            if refined:
                 best = max(refined, key=lambda d: float(d.get("score", 0.0)))
                 if "bbox" in best:
                     seed_box = best["bbox"]
@@ -172,18 +168,23 @@ def run_trespass(
                     was_refined = True
         except Exception as e:
             print("[WARN] GroundingDINO refine failed:", e)
-
-    # --- SAM2 tracking/mask over the clip (optional) ---
-    tracked: Dict[int, np.ndarray] = {}
-    if enable_sam2:
+    else:
+        # fallback refine via YOLOE only
         try:
-            sam2 = SAM2Video(cfg.heavy.sam2_model_id, device="cuda")
-            tracked = sam2.track(clip_uri, init_frame_idx=0, init_box_xyxy=seed_box)  # 클립 기준 0 프레임
+            refined_dets = det.detect(first_frame_img, [trigger_label] if trigger_label else q)
+            if refined_dets:
+                best = max(refined_dets, key=lambda d: float(d.get("score", 0.0)))
+                seed_box = best.get("bbox", seed_box)
+                grd_label = str(best.get("cls", trigger_label or "object"))
+                was_refined = True
         except Exception as e:
-            print("[WARN] SAM2 tracking failed:", e)
-            tracked = {}
+            print("[WARN] YOLOE refine failed:", e)
 
-    # --- Always create overlay video with ROI + bboxes (+ optional mask) ---
+    # --- Gather YOLOE results around the event for overlay ---
+    # We will collect detections on the clip frames to draw YOLOE bbox/mask per frame.
+    yoloe_dets_by_frame: Dict[int, List[Dict[str, Any]]] = {}
+
+    # --- Always create overlay video with ROI + bboxes + YOLOE masks + optional GRD refined bbox ---
     overlay_path = os.path.join(cfg.work_dir, "overlays", f"overlay_{os.path.basename(clip_uri)}")
     try:
         cap = cv2.VideoCapture(clip_uri)
@@ -227,23 +228,52 @@ def run_trespass(
                 refined_txt = f"seed:{trigger_label or 'object'}"
             cv2.putText(frame, refined_txt, (rx1, max(0, ry1 - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
-            # Optional: blend SAM2 mask (semi-transparent red)
-            if tracked and (idx in tracked):
-                m = (tracked[idx] > 0).astype(np.uint8)
-                overlay = np.zeros((h, w, 4), dtype=np.uint8)
-                overlay[m.astype(bool)] = (255, 0, 0, 100)
-                frame_rgba = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-                from PIL import Image as PILImage
-                pf = PILImage.fromarray(frame_rgba); po = PILImage.fromarray(overlay)
-                pf = PILImage.alpha_composite(pf, po)
-                frame = cv2.cvtColor(np.array(pf), cv2.COLOR_RGBA2BGR)
-                # draw tracked bbox (yellow) following the mask for this frame
-                ys, xs = np.where(m > 0)
-                if xs.size > 0 and ys.size > 0:
-                    x1, y1, w_box, h_box = cv2.boundingRect(np.column_stack((xs, ys)))
-                    x2, y2 = x1 + w_box, y1 + h_box
-                    cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 255), 2)
-                    cv2.putText(frame, "tracked", (int(x1), max(0, int(y1) - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+            # Highlight intersection between ROI polygon and refined bbox (cyan tint)
+            try:
+                if roi_poly is not None and len(roi_poly) >= 3:
+                    roi_mask = np.zeros((h, w), dtype=np.uint8)
+                    pts = np.array(roi_poly, dtype=np.int32).reshape((-1, 1, 2))
+                    cv2.fillPoly(roi_mask, [pts], 255)
+                    box_mask = np.zeros((h, w), dtype=np.uint8)
+                    cv2.rectangle(box_mask, (rx1, ry1), (rx2, ry2), 255, thickness=-1)
+                    inter = cv2.bitwise_and(roi_mask, box_mask)
+                    if np.any(inter):
+                        overlay_rgba = np.zeros((h, w, 4), dtype=np.uint8)
+                        overlay_rgba[inter > 0] = (0, 255, 255, 100)  # cyan
+                        frame_rgba = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+                        from PIL import Image as PILImage
+                        pf = PILImage.fromarray(frame_rgba); po = PILImage.fromarray(overlay_rgba)
+                        pf = PILImage.alpha_composite(pf, po)
+                        frame = cv2.cvtColor(np.array(pf), cv2.COLOR_RGBA2BGR)
+            except Exception:
+                pass
+
+            # YOLOE per-frame detections (draw mask in semi-transparent red, and bbox in yellow)
+            try:
+                # Decode this frame to PIL for detection
+                pil_frame = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                q_for_frame = [trigger_label] if trigger_label else (q if 'q' in locals() else ["person"])  # type: ignore
+                dets_here = det.detect(pil_frame, q_for_frame)
+                yoloe_dets_by_frame[idx] = dets_here
+                for d in dets_here:
+                    bx1, by1, bx2, by2 = [int(v) for v in d.get("bbox", [0,0,0,0])]
+                    # Mask
+                    m = d.get("mask")
+                    if isinstance(m, np.ndarray) and m.ndim == 2:
+                        overlay_rgba = np.zeros((h, w, 4), dtype=np.uint8)
+                        mm = (m > 0).astype(np.uint8)
+                        overlay_rgba[mm.astype(bool)] = (255, 0, 0, 100)
+                        frame_rgba = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+                        from PIL import Image as PILImage
+                        pf = PILImage.fromarray(frame_rgba); po = PILImage.fromarray(overlay_rgba)
+                        pf = PILImage.alpha_composite(pf, po)
+                        frame = cv2.cvtColor(np.array(pf), cv2.COLOR_RGBA2BGR)
+                    # BBox
+                    cv2.rectangle(frame, (bx1, by1), (bx2, by2), (0, 255, 255), 2)
+                    cv2.putText(frame, f"yoloe:{d.get('cls','obj')} {d.get('score',0):.2f}", (bx1, max(0, by1-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,255), 2)
+            except Exception as e:
+                # non-fatal drawing error
+                pass
 
             vw.write(frame); idx += 1
         vw.release(); cap.release()

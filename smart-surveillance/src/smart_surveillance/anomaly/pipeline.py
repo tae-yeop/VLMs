@@ -7,7 +7,7 @@ from PIL import Image
 
 from smart_surveillance.configs import PipelineConfig
 from smart_surveillance.ingestion.video_loader import VideoLoader
-from smart_surveillance.detection.yoloworld import YOLOWorldDetector
+from smart_surveillance.detection.yoloe import YOLOEOpenVocabDetector
 from smart_surveillance.heavy.qwen_vl import QwenVideoQA
 
 
@@ -62,11 +62,9 @@ def run_anomaly(
     """
     cfg.ensure_dirs()
 
-    # Gate detector: open-vocab with anomaly queries
-    det = YOLOWorldDetector(
-        backend=cfg.detection.backend,
-        yoloworld_model_path=cfg.detection.yoloworld_model_path,
-        owlvit_model_id=cfg.detection.owlvit_model_id,
+    # Gate detector: unified YOLOE open-vocab with segmentation
+    det = YOLOEOpenVocabDetector(
+        yoloe_model_path=cfg.detection.yoloe_model_path or "yoloe-11l-seg.pt",
         score_threshold=min(cfg.detection.score_threshold, cfg.anomaly.detection_conf_threshold),
         max_dets=cfg.detection.max_dets,
         device="cuda",

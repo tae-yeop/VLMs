@@ -18,11 +18,10 @@ class ROIConfig:
 
 @dataclass
 class DetectionConfig:
-    backend: str = "owlvit"  # "yoloworld" or "owlvit"
-    # YOLO-World: (선택) 로컬 엔진 경로/모델명 등 (환경별로 채워 쓰기)
-    yoloworld_model_path: Optional[str] = None
-    # OWL-ViT(폴백) 모델 ID
-    owlvit_model_id: str = "google/owlv2-base-patch16"
+    backend: str = "yoloe"  # unified backend
+    # YOLOE seg model path (Ultralytics). e.g., "yoloe-11l-seg.pt"
+    yoloe_model_path: Optional[str] = "yoloe-11l-seg.pt"
+    # Legacy fields removed: yoloworld_model_path, owlvit_model_id
     # 게이트에서 사용할 오픈보캡 프롬프트
     open_vocab_queries: List[str] = field(default_factory=lambda: ["person"])
     score_threshold: float = 0.25

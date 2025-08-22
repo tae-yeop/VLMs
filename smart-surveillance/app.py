@@ -1,5 +1,14 @@
 # app.py (요약/추가)
 import os, sys, json, cv2, numpy as np
+# Ensure temp files are contained under project, not in repo root
+_APP_DIR = os.path.dirname(__file__)
+_GR_TMP = os.path.join(_APP_DIR, ".gradio", "tmp")
+try:
+    os.makedirs(_GR_TMP, exist_ok=True)
+except Exception:
+    pass
+os.environ.setdefault("GRADIO_TEMP_DIR", _GR_TMP)
+os.environ.setdefault("TMPDIR", _GR_TMP)
 # Ensure local `src` package is importable before any package imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
@@ -12,9 +21,8 @@ from smart_surveillance.pipeline.trespass import run_trespass
 from smart_surveillance.anomaly import run_anomaly
 from smart_surveillance.utils.roi import polygon_from_mask
 
-from smart_surveillance.detection.yoloworld import YOLOWorldDetector
+from smart_surveillance.detection.yoloe import YOLOEOpenVocabDetector
 from smart_surveillance.heavy.grd import GroundingDINOWrapper
-from smart_surveillance.heavy.sam2_video import SAM2Video
 from smart_surveillance.heavy.qwen_vl import QwenVideoQA
 
 # 샘플 비디오 경로: 우선순위 = 환경변수 -> ./assets/demo.mp4
@@ -191,7 +199,7 @@ def clear_roi(video_state):
         return _editor_value(frame0), "ROI cleared. Draw a new mask.", []
     return _editor_value(None), "ROI cleared. Load a video first.", []
 
-def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, enable_grd, enable_sam2, enable_qwen, mode, queries_text, judge_prompt_preset, judge_prompt_override):
+def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, enable_grd, enable_qwen, mode, queries_text, judge_prompt_preset, judge_prompt_override):
     """
     ③ 실행: 선택된 비디오 + (옵션) ROI로 파이프라인 수행
     반환: [overlay_video, markdown_summary, raw_json]
@@ -200,7 +208,8 @@ def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, ena
         raise gr.Error("No video selected. Load or upload a video first.")
 
     cfg = PipelineConfig()
-    cfg.detection.backend = backend
+    # Force unified YOLOE backend regardless of previous radios (we will simplify UI below)
+    cfg.detection.backend = "yoloe"
     cfg.ensure_dirs()
 
     # Parse user queries (comma/line separated)
@@ -232,7 +241,6 @@ def run_pipeline_gr(video_state, backend, image_editor_data, roi_poly_state, ena
             video_state,
             cfg,
             enable_grd=bool(enable_grd),
-            enable_sam2=bool(enable_sam2),
             enable_qwen=bool(enable_qwen),
             queries=user_queries or None,
             judge_prompt_override=(judge_prompt_override or judge_prompt_preset or None),
@@ -291,22 +299,13 @@ def chat_send(chat_state, chat_input, clip_uri, chat_system):
 
 def warmup_models():
     try:
-        # 두 백엔드 가볍게 로드(가중치 캐시 목적)
-        YOLOWorldDetector(backend="yoloworld", yoloworld_model_path="yolov8s-worldv2.pt", device="cuda")
+        YOLOEOpenVocabDetector(yoloe_model_path=PipelineConfig().detection.yoloe_model_path or "yoloe-11l-seg.pt", device="cuda")
     except Exception as e:
-        print("[WARMUP] YOLO-World warmup failed:", e)
-    try:
-        YOLOWorldDetector(backend="owlvit", device="cuda")
-    except Exception as e:
-        print("[WARMUP] OWL-ViT warmup failed:", e)
+        print("[WARMUP] YOLOE warmup failed:", e)
     try:
         GroundingDINOWrapper("IDEA-Research/grounding-dino-base", device="cuda")
     except Exception as e:
         print("[WARMUP] GroundingDINO warmup failed:", e)
-    try:
-        SAM2Video("facebook/sam2-hiera-large", device="cuda")
-    except Exception as e:
-        print("[WARMUP] SAM2 warmup failed:", e)
     try:
         QwenVideoQA("Qwen/Qwen2.5-VL-7B-Instruct")
     except Exception as e:
@@ -348,12 +347,11 @@ with gr.Blocks(title="Smart Surveillance (Trespass & Anomaly)") as demo:
     # ③ 실행
     gr.Markdown("## ③ 실행")
     mode = gr.Radio(choices=["trespass", "anomaly"], value="trespass", label="모드")
-    backend = gr.Radio(choices=["owlvit", "yoloworld"], value="owlvit", label="게이트 백엔드")
+    backend = gr.Radio(choices=["yoloe"], value="yoloe", label="백엔드 (YOLOE)")
     queries_text = gr.Textbox(label="오픈보캡 프롬프트(쉼표/줄바꿈 구분)", value=DEFAULT_QUERIES, placeholder="person, fire, smoke, gun, knife, fight")
     # Heavy components toggles
     with gr.Row():
-        enable_grd = gr.Checkbox(value=True, label="GroundingDINO")
-        enable_sam2 = gr.Checkbox(value=True, label="SAM2")
+        enable_grd = gr.Checkbox(value=True, label="GroundingDINO refine")
         enable_qwen = gr.Checkbox(value=True, label="Qwen-VL Judge")
     with gr.Row():
         judge_prompt_preset = gr.Dropdown(choices=list(_prompt_presets().keys()), value="Trespass (YES/NO/UNCERTAIN)", label="Qwen Judge 프리셋")
@@ -397,7 +395,7 @@ with gr.Blocks(title="Smart Surveillance (Trespass & Anomaly)") as demo:
     # 실행
     run_btn.click(
         fn=run_pipeline_gr,
-        inputs=[video_state, backend, editor, roi_state, enable_grd, enable_sam2, enable_qwen, mode, queries_text, judge_prompt_preset, judge_prompt_override],
+        inputs=[video_state, backend, editor, roi_state, enable_grd, enable_qwen, mode, queries_text, judge_prompt_preset, judge_prompt_override],
         outputs=[out_video, out_md, out_json, out_clip_state]
     )
 
@@ -424,7 +422,7 @@ if __name__ == "__main__":
 #     ap = argparse.ArgumentParser()
 #     ap.add_argument("--video", required=True)
 #     ap.add_argument("--roi", required=False, help='Optional ROI polygon: "[[100,50],[400,50],[400,300],[100,300]]" or json file. If not provided, uses full frame detection.')
-#     ap.add_argument("--backend", default="owlvit", choices=["owlvit","yoloworld"])
+#     ap.add_argument("--backend", default="yoloe", choices=["yoloe"])
 #     args = ap.parse_args()
 
 #     cfg = PipelineConfig()
