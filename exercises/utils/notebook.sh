@@ -12,7 +12,7 @@
 
 export CONTAINER_IMAGE_PATH='/purestorage/AILAB/AI_1/tyk/0_Software/sqsh/llm_27_v16.sqsh'
 export CACHE_FOR_PATH='/purestorage/AILAB/AI_1/tyk/0_Software/cache'
-export MY_WORKSPACE_PATH='/purestorage/AILAB/AI_1/tyk/3_CUProjects/language_model'
+export MY_WORKSPACE_PATH='/purestorage/AILAB/AI_1/tyk/3_CUProjects/VLMs'
 
 PORT=$(shuf -i 10000-19999 -n 1)
 
